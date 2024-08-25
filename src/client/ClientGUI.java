@@ -1,15 +1,17 @@
+package client;
+
+import server.ui.ServerGUI;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-public class ClientGUI extends JFrame{
+public class ClientGUI extends JFrame implements ClientView{
     public static final int WIDTH = 800;
     public static final int HEIGHT = 600;
 
-    private ServerWindow server;
-    private boolean connected;
-    private String clientName;
+    private ServerGUI server;
 
     JTextArea log;
     JTextField IPAdress, PortAdress, login, message;
@@ -20,62 +22,34 @@ public class ClientGUI extends JFrame{
     JPanel header;
     JPanel footer;
 
-    public ClientGUI(ServerWindow server) {
-        this.server = server;
+    private ClientController clientController;
 
-        setSize(WIDTH, HEIGHT);
-        setResizable(false);
-        setTitle("Chat");
-
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
+    public ClientGUI() {
+        settings();
         createPanel();
 
         setVisible(true);
+    }
+
+    @Override
+    public void setClientController(ClientController clientController) {
+        this.clientController = clientController;
+    }
+
+    // выносим настройки в отдельный метод что бы не сорить в конструкторе
+    private void settings() {
+        setSize(WIDTH, HEIGHT);
+        setResizable(false);
+        setTitle("Chat");
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
     }
 
     private void appendLog(String text) {
         log.append(text + "\n");
     }
 
-    private void message() {
-        if (connected) {
-            String text = message.getText();
-            server.message(clientName + ": " + text);
-            message.setText("");
-        } else {
-            appendLog("Server not connected");
-        }
-    }
-
-    public void connectToTheServer() {
-        if (server.connectUserToServer(this)) {
-            connected = true;
-            appendLog("You are connected successfully");
-
-            header.setVisible(false);
-
-            clientName = login.getText();
-            String log = server.getLog();
-
-            if (log != null) {
-                appendLog(log);
-            }
-
-        } else {
-            appendLog("You are not logged in");
-        }
-        System.out.println(connected);
-    }
     public void disconnectFromTheServer() {
-        if (connected) {
-            connected = false;
-            header.setVisible(true);
-
-            server.disconnectUser(this);
-
-            appendLog("You are disconnected or server is down");
-        }
+        clientController.disconnectFromServer();
     }
 
     private void createPanel() {
@@ -96,7 +70,7 @@ public class ClientGUI extends JFrame{
         connectButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent actionEvent) {
-                connectToTheServer();
+                login();
             }
         });
 
@@ -106,6 +80,11 @@ public class ClientGUI extends JFrame{
         header.add(password);
         header.add(connectButton);
         return header;
+    }
+
+    private void message() {
+        clientController.message(message.getText());
+        message.setText("");
     }
 
     private Component createLog() {
@@ -122,6 +101,7 @@ public class ClientGUI extends JFrame{
         send = new JButton("Send");
 
         send.addActionListener(new ActionListener() {
+            @Override
             public void actionPerformed(ActionEvent actionEvent) {
                 message();
             }
@@ -133,5 +113,26 @@ public class ClientGUI extends JFrame{
         return footer;
     }
 
+    private void login() {
+        if (clientController.connectToServer(login.getText())) {
+            header.setVisible(false);
+        }
+    }
+
+    @Override
+    public void showMessage(String message) {
+        log.append(message + "\n");
+    }
+
+    @Override
+    public void disconnectFromServer() {
+        clientController.disconnectFromServer();
+        header.setVisible(false);
+    }
+
+    /*@Override
+    public void disconnectFromServer() {
+        clientController.di
+    }*/
 
 }
